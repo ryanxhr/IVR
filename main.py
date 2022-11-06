@@ -44,7 +44,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_timesteps", default=1e6, type=int)  # Max time steps to run environment
     # Algo
     parser.add_argument("--batch_size", default=256, type=int)  # Batch size for both actor and critic
-    parser.add_argument("--alpha", default=0.2, type=float)
+    parser.add_argument("--alpha", default=0.5, type=float)
     parser.add_argument("--tau", default=0.7, type=float)
     parser.add_argument("--no_state_normalize", action='store_true')
     parser.add_argument("--no_reward_normalize", action='store_true')
@@ -67,8 +67,8 @@ if __name__ == "__main__":
     if 'antmaze' in args.env:
         # eval_freq = 100000
         # eval_episodes = 100
-        eval_freq = 10000
-        eval_episodes = 10
+        eval_freq = 30000
+        eval_episodes = 100
     else:
         eval_freq = 5000
         eval_episodes = 10
@@ -83,6 +83,9 @@ if __name__ == "__main__":
     elif args.algorithm == 'IQL':
         policy = IQL.IQL(state_dim, action_dim, max_action, alpha=args.alpha, tau=args.tau)
         algo_name = f"{args.algorithm}_alpha-{args.alpha}_tau-{args.tau}"
+    elif args.algorithm == 'XQL':
+        policy = XQL.XQL(state_dim, action_dim, max_action, alpha=args.alpha)
+        algo_name = f"{args.algorithm}_alpha-{args.alpha}"
     elif args.algorithm == 'SQL':
         policy = SQL.SQL(state_dim, action_dim, max_action, alpha=args.alpha)
         algo_name = f"{args.algorithm}_alpha-{args.alpha}"

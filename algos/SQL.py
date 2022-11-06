@@ -174,7 +174,7 @@ class SQL(object):
             q = torch.minimum(q1, q2).detach()
 
         v = self.value(state)
-        diff = (q - v) / (2 * self.alpha) + 1.0
+        diff = (q - v) / self.alpha + 0.5
         sp_term, sp_weight = sparse(diff, 1.0)
         loss1 = sp_term ** 2
         loss2 = v / self.alpha
@@ -204,7 +204,7 @@ class SQL(object):
 
             # diff = (q - v) / (2 * self.alpha) + 1.0
             diff = (q - v)
-            sp_term, sp_weight = sparse(diff, 1.0)
+            sp_term, _ = sparse(diff, 1.0)
             sp_term = torch.clamp(sp_term, max=100.0).squeeze(-1).detach()
 
         pi, log_pi, _ = self.policy(state)
