@@ -38,14 +38,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # Experiment
     parser.add_argument("--root_dir", default="results")  # Policy name
-    parser.add_argument("--algorithm", default="SQL")  # Policy name
+    parser.add_argument("--algorithm", default="IQL")  # Policy name
     parser.add_argument('--env', default="antmaze-medium-diverse-v2")  # environment name
     parser.add_argument("--seed", default=0, type=int)  # Sets Gym, PyTorch and Numpy seeds
     parser.add_argument("--max_timesteps", default=1e6, type=int)  # Max time steps to run environment
     # Algo
     parser.add_argument("--batch_size", default=256, type=int)  # Batch size for both actor and critic
-    parser.add_argument("--alpha", default=0.5, type=float)
-    parser.add_argument("--tau", default=0.7, type=float)
+    parser.add_argument("--alpha", default=5, type=float)
+    parser.add_argument("--tau", default=0.9, type=float)
     parser.add_argument("--no_state_normalize", action='store_true')
     parser.add_argument("--no_reward_normalize", action='store_true')
     parser.add_argument('--max_episode_steps', default=1000, type=int)
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     if 'antmaze' in args.env:
         # eval_freq = 100000
         # eval_episodes = 100
-        eval_freq = 30000
+        eval_freq = 10000
         eval_episodes = 100
     else:
         eval_freq = 5000
