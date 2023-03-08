@@ -12,7 +12,6 @@ def get_config():
 
     config.discount = 0.99
 
-    # config.temperature = 3.0
     config.dropout_rate = 0.0
 
     config.tau = 0.005  # For soft target updates.
