@@ -21,7 +21,7 @@ def evaluate(env_name: str, agent: nn.Module, env: gym.Env,
         observation, done = env.reset(), False
         total_reward = 0.
         while not done:
-            action = agent.sample_actions(observation, tmp=0.0)
+            action = agent.sample_actions(observation, temperature=0.0)
             observation, reward, done, info = env.step(action)
             total_reward += reward
         total_reward_.append(total_reward)

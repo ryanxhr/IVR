@@ -34,7 +34,7 @@ def _update_jit_sql(
     new_value, value_info = update_v(target_critic, value, batch, alpha, alg='SQL')
     key, rng = jax.random.split(rng)
     new_actor, actor_info = update_actor(key, actor, target_critic,
-                                             new_value, batch, alpha, alg='SQL')
+                                         new_value, batch, alpha, alg='SQL')
     new_critic, critic_info = update_q(critic, new_value, batch, discount)
 
     new_target_critic = target_update(new_critic, target_critic, tau)
@@ -56,7 +56,7 @@ def _update_jit_eql(
     new_value, value_info = update_v(target_critic, value, batch, alpha, alg='EQL')
     key, rng = jax.random.split(rng)
     new_actor, actor_info = update_actor(key, actor, target_critic,
-                                             new_value, batch, alpha, alg='EQL')
+                                         new_value, batch, alpha, alg='EQL')
     new_critic, critic_info = update_q(critic, new_value, batch, discount)
 
     new_target_critic = target_update(new_critic, target_critic, tau)
@@ -142,10 +142,10 @@ class Learner(object):
 
     def sample_actions(self,
                        observations: np.ndarray,
-                       alpha: float = 1.0) -> jnp.ndarray:
+                       temperature: float = 1.0) -> jnp.ndarray:
         rng, actions = policy.sample_actions(self.rng, self.actor.apply_fn,
                                              self.actor.params, observations,
-                                             alpha)
+                                             temperature)
         self.rng = rng
 
         actions = np.asarray(actions)

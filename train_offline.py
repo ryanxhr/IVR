@@ -37,7 +37,6 @@ config_flags.DEFINE_config_file(
 
 
 def normalize(dataset):
-
     trajs = split_into_trajectories(dataset.observations, dataset.actions,
                                     dataset.rewards, dataset.masks,
                                     dataset.dones_float,
@@ -82,8 +81,10 @@ def make_env_and_dataset(env_name: str,
 def main(_):
     env, dataset = make_env_and_dataset(FLAGS.env_name, FLAGS.seed)
     kwargs = dict(FLAGS.config)
-    kwargs['alpha'] = FLAGS.alpha
+    kwargs['env_name'] = FLAGS.env_name
     kwargs['alg'] = FLAGS.alg
+    kwargs['alpha'] = FLAGS.alpha
+    kwargs['seed'] = FLAGS.seed
     # log(f'Total target location reward {dataset.rewards.sum() + len(dataset.rewards)}')
     wandb.init(
         project='IVR_reproduce',
@@ -98,7 +99,7 @@ def main(_):
                     **kwargs)
     kwargs['seed']=FLAGS.seed
 
-    log = Log(Path('benchmark')/FLAGS.env_name, kwargs)
+    log = Log(Path('results')/FLAGS.env_name, kwargs)
     log(f'Log dir: {log.dir}')
     for i in tqdm.tqdm(range(1, FLAGS.max_steps + 1),
                        smoothing=0.1,
