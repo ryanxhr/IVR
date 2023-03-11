@@ -2,10 +2,12 @@
 
 # Script to reproduce results
 
-GPU_LIST=(0 1)
+sleep 10800
 
-for seed in 0; do
-for alg in "SQL"; do
+GPU_LIST=(0 1 2 3 4 5 6 7)
+
+for seed in 0 1 2 3 4; do
+for alg in "SQL" "EQL"; do
 
 GPU_DEVICE=${GPU_LIST[task%${#GPU_LIST[@]}]}
 CUDA_VISIBLE_DEVICES=$GPU_DEVICE python train_offline.py \
@@ -17,7 +19,7 @@ CUDA_VISIBLE_DEVICES=$GPU_DEVICE python train_offline.py \
   --eval_episodes 100 \
   --seed $seed &
 
-sleep 2
+sleep 20
 let "task=$task+1"
 
 GPU_DEVICE=${GPU_LIST[task%${#GPU_LIST[@]}]}
@@ -30,7 +32,7 @@ CUDA_VISIBLE_DEVICES=$GPU_DEVICE python train_offline.py \
   --eval_episodes 100 \
   --seed $seed &
 
-sleep 2
+sleep 20
 let "task=$task+1"
 
 GPU_DEVICE=${GPU_LIST[task%${#GPU_LIST[@]}]}
@@ -43,7 +45,7 @@ CUDA_VISIBLE_DEVICES=$GPU_DEVICE python train_offline.py \
   --eval_episodes 100 \
   --seed $seed &
 
-sleep 2
+sleep 20
 let "task=$task+1"
 
 GPU_DEVICE=${GPU_LIST[task%${#GPU_LIST[@]}]}
@@ -56,7 +58,7 @@ CUDA_VISIBLE_DEVICES=$GPU_DEVICE python train_offline.py \
   --eval_episodes 100 \
   --seed $seed &
 
-sleep 2
+sleep 20
 let "task=$task+1"
 
 GPU_DEVICE=${GPU_LIST[task%${#GPU_LIST[@]}]}
@@ -69,7 +71,7 @@ CUDA_VISIBLE_DEVICES=$GPU_DEVICE python train_offline.py \
   --eval_episodes 100 \
   --seed $seed &
 
-sleep 2
+sleep 20
 let "task=$task+1"
 
 GPU_DEVICE=${GPU_LIST[task%${#GPU_LIST[@]}]}
@@ -82,7 +84,7 @@ CUDA_VISIBLE_DEVICES=$GPU_DEVICE python train_offline.py \
   --eval_episodes 100 \
   --seed $seed &
 
-sleep 2
+sleep 20
 let "task=$task+1"
 
 done

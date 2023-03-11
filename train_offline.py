@@ -81,23 +81,23 @@ def make_env_and_dataset(env_name: str,
 def main(_):
     env, dataset = make_env_and_dataset(FLAGS.env_name, FLAGS.seed)
     kwargs = dict(FLAGS.config)
-    kwargs['env_name'] = FLAGS.env_name
     kwargs['alg'] = FLAGS.alg
     kwargs['alpha'] = FLAGS.alpha
-    kwargs['seed'] = FLAGS.seed
-    # log(f'Total target location reward {dataset.rewards.sum() + len(dataset.rewards)}')
-    wandb.init(
-        project='IVR_reproduce',
-        entity='ryanxhr',
-        name=f"{FLAGS.env_name}",
-        config=kwargs
-    )
+
     agent = Learner(FLAGS.seed,
                     env.observation_space.sample()[np.newaxis],
                     env.action_space.sample()[np.newaxis],
                     max_steps=FLAGS.max_steps,
                     **kwargs)
-    kwargs['seed']=FLAGS.seed
+    kwargs['seed'] = FLAGS.seed
+    kwargs['env_name'] = FLAGS.env_name
+
+    # wandb.init(
+    #     project='IVR_reproduce',
+    #     entity='ryanxhr',
+    #     name=f"{FLAGS.env_name}",
+    #     config=kwargs
+    # )
 
     log = Log(Path('results')/FLAGS.env_name, kwargs)
     log(f'Log dir: {log.dir}')
@@ -108,13 +108,13 @@ def main(_):
 
         update_info = agent.update(batch)
 
-        if i % FLAGS.log_interval == 0:
-            wandb.log(update_info, i)
+        # if i % FLAGS.log_interval == 0:
+            # wandb.log(update_info, i)
 
         if i % FLAGS.eval_interval == 0:
             normalized_return = evaluate(FLAGS.env_name, agent, env, FLAGS.eval_episodes)
             log.row({'normalized_return': normalized_return})
-            wandb.log({'normalized_return': normalized_return}, i)
+            # wandb.log({'normalized_return': normalized_return}, i)
 
 
 if __name__ == '__main__':

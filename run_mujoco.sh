@@ -2,10 +2,10 @@
 
 # Script to reproduce results
 
-GPU_LIST=(0 1)
+GPU_LIST=(0 1 2 3 4 5 6 7)
 
-for seed in 0; do
-for alg in "SQL"; do
+for seed in 0 1 2 3 4; do
+for alg in "SQL" "EQL"; do
 
 GPU_DEVICE=${GPU_LIST[task%${#GPU_LIST[@]}]}
 CUDA_VISIBLE_DEVICES=$GPU_DEVICE python train_offline.py \
