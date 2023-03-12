@@ -25,7 +25,7 @@ class Critic(nn.Module):
     def __call__(self, observations: jnp.ndarray,
                  actions: jnp.ndarray) -> jnp.ndarray:
         inputs = jnp.concatenate([observations, actions], -1)
-        critic = MLP((*self.hidden_dims, 1),
+        critic = MLP((*self.hidden_dims, 1), layer_norm=True,
                      activations=self.activations)(inputs)
         return jnp.squeeze(critic, -1)
 

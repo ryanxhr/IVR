@@ -45,21 +45,29 @@ def update_q(critic: Model, value: Model,
              batch: Batch,  discount: float) -> Tuple[Model, InfoDict]:
     next_v = value(batch.next_observations)
     target_q = batch.rewards + discount * batch.masks * next_v
+    # def critic_loss_fn(critic_params: Params) -> Tuple[jnp.ndarray, InfoDict]:
+    #     q1, q2 = critic.apply({'params': critic_params}, batch.observations,
+    #                           batch.actions)
+    #
+    #     def mse_loss(q, q_target):
+    #         loss_dict = {}
+    #
+    #         x = q-q_target
+    #         loss = huber_loss(x, delta=20.0)  # x**2
+    #         loss_dict['critic_loss'] = loss.mean()
+    #
+    #         return loss.mean()
+    #
+    #     critic_loss = (mse_loss(q1, target_q) + mse_loss(q2, target_q)).mean()
+    #
+    #     return critic_loss, {
+    #         'critic_loss': critic_loss,
+    #         'q1': q1.mean()
+    #     }
     def critic_loss_fn(critic_params: Params) -> Tuple[jnp.ndarray, InfoDict]:
         q1, q2 = critic.apply({'params': critic_params}, batch.observations,
                               batch.actions)
-
-        def mse_loss(q, q_target):
-            loss_dict = {}
-
-            x = q-q_target
-            loss = huber_loss(x, delta=20.0)  # x**2
-            loss_dict['critic_loss'] = loss.mean()
-
-            return loss.mean()
-
-        critic_loss = (mse_loss(q1, target_q) + mse_loss(q2, target_q)).mean()
-
+        critic_loss = ((q1 - target_q) ** 2 + (q2 - target_q) ** 2).mean()
         return critic_loss, {
             'critic_loss': critic_loss,
             'q1': q1.mean()

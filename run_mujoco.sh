@@ -4,7 +4,7 @@
 
 GPU_LIST=(0 1 2 3 4 5 6 7)
 
-for seed in 0 1 2 3 4; do
+for seed in 42; do
 for alg in "SQL" "EQL"; do
 
 GPU_DEVICE=${GPU_LIST[task%${#GPU_LIST[@]}]}
