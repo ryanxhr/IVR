@@ -40,7 +40,7 @@ class MLP(nn.Module):
                 if self.layer_norm:
                     x = nn.LayerNorm()(x)
                 x = self.activations(x)
-                if self.dropout_rate is not None:
+                if self.dropout_rate is not None and self.dropout_rate > 0:
                     x = nn.Dropout(rate=self.dropout_rate)(
                         x, deterministic=not training)
         return x
