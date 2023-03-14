@@ -25,10 +25,10 @@ flags.DEFINE_integer('log_interval', 1000, 'Logging interval.')
 flags.DEFINE_integer('eval_interval', 10000, 'Eval interval.')
 flags.DEFINE_integer('batch_size', 256, 'Mini batch size.')
 flags.DEFINE_integer('max_steps', int(1e6), 'Number of training steps.')
+flags.DEFINE_float('tmp', 1, 'hyper')
 flags.DEFINE_string('mix_dataset', 'None', 'mix the dataset')
 flags.DEFINE_boolean('tqdm', True, 'Use tqdm progress bar.')
-flags.DEFINE_string('alg', 'SQL', 'the training algorithm')
-flags.DEFINE_float('tmp', 1.0 , 'temperature')
+flags.DEFINE_float('expert_ratio', 1. , 'the expert dataset ratio')
 config_flags.DEFINE_config_file(
     'config',
     'default.py',
@@ -56,16 +56,31 @@ def normalize(dataset):
 
 
 def make_env_and_dataset(env_name: str,
-                         seed: int) -> Tuple[gym.Env, D4RLDataset]:
-    env = gym.make(env_name)
+                         seed: int,
+                         mix_dataset: str=None, 
+                         expert_ratio: int=1. ) -> Tuple[gym.Env, D4RLDataset]:
+    if 'expert' not in env_name:
+        raise ValueError('the env_name must be expert')
 
+    base_env_dict = ['hopper', 'walker2d', 'halfcheetah']
+    add_env_name = [base_env for base_env in base_env_dict if base_env in env_name]
+    add_env_name = add_env_name[0]
+    if mix_dataset=='medium':
+        add_env_name = f"{add_env_name}-medium-v2"
+    elif mix_dataset=='random':
+        add_env_name = f"{add_env_name}-random-v2"
+    else:
+        raise NameError('mix_dataset must be random or medium')
+    "mix the medium with expert"
+    add_env = gym.make(add_env_name)
+    env = gym.make(env_name)
     env = wrappers.EpisodeMonitor(env)
     env = wrappers.SinglePrecision(env)
 
     env.seed(seed)
     env.action_space.seed(seed)
     env.observation_space.seed(seed)
-    dataset = D4RLDataset(env)
+    dataset = D4RLDataset(env, add_env=add_env, expert_ratio=expert_ratio)
 
     if 'antmaze' in FLAGS.env_name:
         dataset.rewards -= 1.0
@@ -73,34 +88,32 @@ def make_env_and_dataset(env_name: str,
         # but I found no difference between (x - 0.5) * 4 and x - 1.0
     elif ('halfcheetah' in FLAGS.env_name or 'walker2d' in FLAGS.env_name
           or 'hopper' in FLAGS.env_name):
-        # pass
         normalize(dataset)
 
     return env, dataset
 
 
 def main(_):
-    env, dataset = make_env_and_dataset(FLAGS.env_name, FLAGS.seed)
+    env, dataset = make_env_and_dataset(FLAGS.env_name, FLAGS.seed, FLAGS.mix_dataset, FLAGS.expert_ratio)
     kwargs = dict(FLAGS.config)
-    # FLAGS.tmp = int(FLAGS.tmp)
     kwargs['tmp']=FLAGS.tmp
-    kwargs['alg']=FLAGS.alg
+    kwargs['mix_dataset']=FLAGS.mix_dataset
+    log = Log(Path('mix_data_SQL')/FLAGS.env_name, kwargs)
+    log(f'Log dir: {log.dir}')
     # log(f'Total target location reward {dataset.rewards.sum() + len(dataset.rewards)}')
-    wandb.init(
-        project='IVR_reproduce',
-        entity='louis_t0',
-        name=f"{FLAGS.env_name}",
-        config=kwargs
-    )
     agent = Learner(FLAGS.seed,
                     env.observation_space.sample()[np.newaxis],
                     env.action_space.sample()[np.newaxis],
                     max_steps=FLAGS.max_steps,
                     **kwargs)
-    kwargs['seed']=FLAGS.seed
+    kwargs['expert_ratio']=FLAGS.expert_ratio
+    wandb.init(
+        project='SQL_mix_data',
+        entity='louis_t0',
+        name=f"{FLAGS.env_name}_sql",
+        config=kwargs
+    )
 
-    log = Log(Path('benchmark')/FLAGS.env_name, kwargs)
-    log(f'Log dir: {log.dir}')
     for i in tqdm.tqdm(range(1, FLAGS.max_steps + 1),
                        smoothing=0.1,
                        disable=not FLAGS.tqdm):

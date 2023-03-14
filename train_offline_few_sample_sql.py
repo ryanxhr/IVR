@@ -18,17 +18,19 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_string('env_name', 'halfcheetah-expert-v2', 'Environment name.')
 flags.DEFINE_string('save_dir', './results/', 'Tensorboard logging dir.')
-flags.DEFINE_integer('seed', 42, 'Random seed.')
+flags.DEFINE_integer('seed', 0, 'Random seed.')
 flags.DEFINE_integer('eval_episodes', 10,
                      'Number of episodes used for evaluation.')
 flags.DEFINE_integer('log_interval', 1000, 'Logging interval.')
 flags.DEFINE_integer('eval_interval', 10000, 'Eval interval.')
 flags.DEFINE_integer('batch_size', 256, 'Mini batch size.')
 flags.DEFINE_integer('max_steps', int(1e6), 'Number of training steps.')
+flags.DEFINE_float('tmp', 1, 'hyper')
 flags.DEFINE_string('mix_dataset', 'None', 'mix the dataset')
 flags.DEFINE_boolean('tqdm', True, 'Use tqdm progress bar.')
-flags.DEFINE_string('alg', 'SQL', 'the training algorithm')
-flags.DEFINE_float('tmp', 1.0 , 'temperature')
+
+flags.DEFINE_boolean('heavy_tail', True, 'the few samples settings')
+flags.DEFINE_float('heavy_tail_higher', 0., 'the few samples settings')
 config_flags.DEFINE_config_file(
     'config',
     'default.py',
@@ -56,7 +58,9 @@ def normalize(dataset):
 
 
 def make_env_and_dataset(env_name: str,
-                         seed: int) -> Tuple[gym.Env, D4RLDataset]:
+                         seed: int,
+                         heavy_tail: bool,
+                         heavy_tail_higher: float) -> Tuple[gym.Env, D4RLDataset]:
     env = gym.make(env_name)
 
     env = wrappers.EpisodeMonitor(env)
@@ -65,7 +69,7 @@ def make_env_and_dataset(env_name: str,
     env.seed(seed)
     env.action_space.seed(seed)
     env.observation_space.seed(seed)
-    dataset = D4RLDataset(env)
+    dataset = D4RLDataset(env, heavy_tail=heavy_tail, heavy_tail_higher=heavy_tail_higher)
 
     if 'antmaze' in FLAGS.env_name:
         dataset.rewards -= 1.0
@@ -80,27 +84,29 @@ def make_env_and_dataset(env_name: str,
 
 
 def main(_):
-    env, dataset = make_env_and_dataset(FLAGS.env_name, FLAGS.seed)
+    env, dataset = make_env_and_dataset(FLAGS.env_name,
+                                        FLAGS.seed,
+                                        heavy_tail=FLAGS.heavy_tail,
+                                        heavy_tail_higher=FLAGS.heavy_tail_higher)
     kwargs = dict(FLAGS.config)
-    # FLAGS.tmp = int(FLAGS.tmp)
     kwargs['tmp']=FLAGS.tmp
-    kwargs['alg']=FLAGS.alg
-    # log(f'Total target location reward {dataset.rewards.sum() + len(dataset.rewards)}')
-    wandb.init(
-        project='IVR_reproduce',
-        entity='louis_t0',
-        name=f"{FLAGS.env_name}",
-        config=kwargs
-    )
     agent = Learner(FLAGS.seed,
                     env.observation_space.sample()[np.newaxis],
                     env.action_space.sample()[np.newaxis],
                     max_steps=FLAGS.max_steps,
                     **kwargs)
-    kwargs['seed']=FLAGS.seed
 
-    log = Log(Path('benchmark')/FLAGS.env_name, kwargs)
+    kwargs['heavy_tail_higher']=FLAGS.heavy_tail_higher
+    log = Log(Path('few_sample_SQL')/FLAGS.env_name, kwargs)
     log(f'Log dir: {log.dir}')
+    log(f'Total target location reward {dataset.rewards.sum() + len(dataset.rewards)}')
+    wandb.init(
+        project='SQL',
+        entity='louis_t0',
+        name=f"SQL_{FLAGS.env_name}",
+        config=kwargs
+    )
+
     for i in tqdm.tqdm(range(1, FLAGS.max_steps + 1),
                        smoothing=0.1,
                        disable=not FLAGS.tqdm):

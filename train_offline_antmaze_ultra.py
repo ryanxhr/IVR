@@ -25,10 +25,9 @@ flags.DEFINE_integer('log_interval', 1000, 'Logging interval.')
 flags.DEFINE_integer('eval_interval', 10000, 'Eval interval.')
 flags.DEFINE_integer('batch_size', 256, 'Mini batch size.')
 flags.DEFINE_integer('max_steps', int(1e6), 'Number of training steps.')
+flags.DEFINE_float('tmp', 1, 'hyper')
 flags.DEFINE_string('mix_dataset', 'None', 'mix the dataset')
 flags.DEFINE_boolean('tqdm', True, 'Use tqdm progress bar.')
-flags.DEFINE_string('alg', 'SQL', 'the training algorithm')
-flags.DEFINE_float('tmp', 1.0 , 'temperature')
 config_flags.DEFINE_config_file(
     'config',
     'default.py',
@@ -57,6 +56,8 @@ def normalize(dataset):
 
 def make_env_and_dataset(env_name: str,
                          seed: int) -> Tuple[gym.Env, D4RLDataset]:
+
+
     env = gym.make(env_name)
 
     env = wrappers.EpisodeMonitor(env)
@@ -82,12 +83,13 @@ def make_env_and_dataset(env_name: str,
 def main(_):
     env, dataset = make_env_and_dataset(FLAGS.env_name, FLAGS.seed)
     kwargs = dict(FLAGS.config)
-    # FLAGS.tmp = int(FLAGS.tmp)
     kwargs['tmp']=FLAGS.tmp
-    kwargs['alg']=FLAGS.alg
+    kwargs['mix_dataset']=FLAGS.mix_dataset
+    log = Log(Path(FLAGS.save_dir)/FLAGS.env_name, kwargs)
+    log(f'Log dir: {log.dir}')
     # log(f'Total target location reward {dataset.rewards.sum() + len(dataset.rewards)}')
     wandb.init(
-        project='IVR_reproduce',
+        project='SQL',
         entity='louis_t0',
         name=f"{FLAGS.env_name}",
         config=kwargs
@@ -97,10 +99,7 @@ def main(_):
                     env.action_space.sample()[np.newaxis],
                     max_steps=FLAGS.max_steps,
                     **kwargs)
-    kwargs['seed']=FLAGS.seed
 
-    log = Log(Path('benchmark')/FLAGS.env_name, kwargs)
-    log(f'Log dir: {log.dir}')
     for i in tqdm.tqdm(range(1, FLAGS.max_steps + 1),
                        smoothing=0.1,
                        disable=not FLAGS.tqdm):

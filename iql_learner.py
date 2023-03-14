@@ -12,8 +12,8 @@ import value_net
 
 from common import Batch, InfoDict, Model, PRNGKey
 
-from actor import update_actor
-from critic import update_q, update_v
+from iql_actor import update as update_actor
+from iql_critic import update_q, update_v
 
 
 def target_update(critic: Model, target_critic: Model, tau: float) -> Model:
@@ -24,19 +24,20 @@ def target_update(critic: Model, target_critic: Model, tau: float) -> Model:
     return target_critic.replace(params=new_target_params)
 
 @jax.jit
-def _update_jit_sql(
+def _update_jit(
     rng: PRNGKey, actor: Model, critic: Model,
     value: Model, target_critic: Model, batch: Batch, discount: float, tau: float, 
     tmp: float
 ) -> Tuple[PRNGKey, Model, Model, Model, Model, Model, InfoDict]:
-
-    #SQL & EQL
-    new_value, value_info = update_v(target_critic, value, batch, tmp, alg='SQL')
+    # IQL
+    expectile=tmp  # 0.9
+    temperature=3  # 10.0
+    new_value, value_info = update_v(target_critic, value, batch, expectile)
     key, rng = jax.random.split(rng)
     new_actor, actor_info = update_actor(key, actor, target_critic,
-                                             new_value, batch, tmp, alg='SQL')
-    new_critic, critic_info = update_q(critic, new_value, batch, discount)
+                                             new_value, batch, temperature)
 
+    new_critic, critic_info = update_q(critic, new_value, batch, discount)  
     new_target_critic = target_update(new_critic, target_critic, tau)
 
     return rng, new_actor, new_critic, new_value, new_target_critic, {
@@ -45,27 +46,6 @@ def _update_jit_sql(
         **actor_info
     }
 
-@jax.jit
-def _update_jit_eql(
-    rng: PRNGKey, actor: Model, critic: Model,
-    value: Model, target_critic: Model, batch: Batch, discount: float, tau: float, 
-    tmp: float
-) -> Tuple[PRNGKey, Model, Model, Model, Model, Model, InfoDict]:
-
-    #SQL & EQL
-    new_value, value_info = update_v(target_critic, value, batch, tmp, alg='EQL')
-    key, rng = jax.random.split(rng)
-    new_actor, actor_info = update_actor(key, actor, target_critic,
-                                             new_value, batch, tmp, alg='EQL')
-    new_critic, critic_info = update_q(critic, new_value, batch, discount)
-
-    new_target_critic = target_update(new_critic, target_critic, tau)
-
-    return rng, new_actor, new_critic, new_value, new_target_critic, {
-        **critic_info,
-        **value_info,
-        **actor_info
-    }
 
 class Learner(object):
     def __init__(self,
@@ -78,26 +58,23 @@ class Learner(object):
                  hidden_dims: Sequence[int] = (256, 256),
                  discount: float = 0.99,
                  tau: float = 0.005,
-                #  expectile: float = 0.8,
+                 expectile: float = 0.8,
                  tmp: float = 0.1,
                  dropout_rate: Optional[float] = None,
                  value_dropout_rate: Optional[float] = None,
-                 layernorm: bool = False,
                  max_steps: Optional[int] = None,
                  max_clip: Optional[int] = None,
                  mix_dataset: Optional[str] = None,
-                 alg: Optional[str] = None,
                  opt_decay_schedule: str = "cosine"):
         """
         An implementation of the version of Soft-Actor-Critic described in https://arxiv.org/abs/1801.01290
         """
 
-        # self.expectile = expectile
+        self.expectile = expectile
         self.tau = tau
         self.discount = discount
         self.tmp = tmp
         self.max_clip = max_clip
-        self.alg = alg
 
         rng = jax.random.PRNGKey(seed)
         rng, actor_key, critic_key, value_key = jax.random.split(rng, 4)
@@ -127,7 +104,7 @@ class Learner(object):
                               inputs=[critic_key, observations, actions],
                               tx=optax.adam(learning_rate=critic_lr))
 
-        value_def = value_net.ValueCritic(hidden_dims, layer_norm=layernorm, dropout_rate=value_dropout_rate)
+        value_def = value_net.ValueCritic(hidden_dims, dropout_rate=value_dropout_rate)
         value = Model.create(value_def,
                              inputs=[value_key, observations],
                              tx=optax.adam(learning_rate=value_lr))
@@ -153,16 +130,9 @@ class Learner(object):
         return np.clip(actions, -1, 1)
 
     def update(self, batch: Batch) -> InfoDict:
-        # since type <class 'str'> is not a valid JAX type.
-        # we transfer the self.alg == 0 as SQL and EQL otherwise.
-        if self.alg == 'SQL':
-            new_rng, new_actor, new_critic, new_value, new_target_critic, info = _update_jit_sql(
-                self.rng, self.actor, self.critic, self.value, self.target_critic,
-                batch, self.discount, self.tau, self.tmp)
-        elif self.alg == 'EQL':
-            new_rng, new_actor, new_critic, new_value, new_target_critic, info = _update_jit_eql(
-                self.rng, self.actor, self.critic, self.value, self.target_critic,
-                batch, self.discount, self.tau, self.tmp)
+        new_rng, new_actor, new_critic, new_value, new_target_critic, info = _update_jit(
+            self.rng, self.actor, self.critic, self.value, self.target_critic,
+            batch, self.discount, self.tau, self.tmp)
 
         self.rng = new_rng
         self.actor = new_actor
