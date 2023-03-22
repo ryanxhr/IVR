@@ -12,7 +12,8 @@ def get_config():
 
     config.discount = 0.99
 
-    config.dropout_rate = 0.0
+    config.dropout_rate = 0
+    config.layernorm = True
 
     config.tau = 0.005  # For soft target updates.
 

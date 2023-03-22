@@ -16,10 +16,10 @@ from learner import Learner
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('env_name', 'antmaze-medium-diverse-v2', 'Environment name.')
+flags.DEFINE_string('env_name', 'halfcheetah-expert-v2', 'Environment name.')
 flags.DEFINE_string('save_dir', './results/', 'Tensorboard logging dir.')
 flags.DEFINE_integer('seed', 42, 'Random seed.')
-flags.DEFINE_integer('eval_episodes', 100,
+flags.DEFINE_integer('eval_episodes', 10,
                      'Number of episodes used for evaluation.')
 flags.DEFINE_integer('log_interval', 1000, 'Logging interval.')
 flags.DEFINE_integer('eval_interval', 10000, 'Eval interval.')
@@ -28,15 +28,16 @@ flags.DEFINE_integer('max_steps', int(1e6), 'Number of training steps.')
 flags.DEFINE_string('mix_dataset', 'None', 'mix the dataset')
 flags.DEFINE_boolean('tqdm', True, 'Use tqdm progress bar.')
 flags.DEFINE_string('alg', 'SQL', 'the training algorithm')
-flags.DEFINE_float('alpha', 0.8, 'alpha')
+flags.DEFINE_float('alpha', 1.0 , 'temperature')
 config_flags.DEFINE_config_file(
     'config',
-    'configs/antmaze_config.py',
+    'default.py',
     'File path to the training hyperparameter configuration.',
     lock_config=False)
 
 
 def normalize(dataset):
+
     trajs = split_into_trajectories(dataset.observations, dataset.actions,
                                     dataset.rewards, dataset.masks,
                                     dataset.dones_float,
@@ -81,25 +82,24 @@ def make_env_and_dataset(env_name: str,
 def main(_):
     env, dataset = make_env_and_dataset(FLAGS.env_name, FLAGS.seed)
     kwargs = dict(FLAGS.config)
-    kwargs['alg'] = FLAGS.alg
-    kwargs['alpha'] = FLAGS.alpha
-
+    kwargs['alpha']=FLAGS.alpha
+    kwargs['alg']=FLAGS.alg
     agent = Learner(FLAGS.seed,
                     env.observation_space.sample()[np.newaxis],
                     env.action_space.sample()[np.newaxis],
                     max_steps=FLAGS.max_steps,
                     **kwargs)
-    kwargs['seed'] = FLAGS.seed
-    kwargs['env_name'] = FLAGS.env_name
+    kwargs['seed']=FLAGS.seed
+    kwargs['env_name']=FLAGS.env_name
 
-    # wandb.init(
-    #     project='IVR_reproduce',
-    #     entity='ryanxhr',
-    #     name=f"{FLAGS.env_name}",
-    #     config=kwargs
-    # )
+    wandb.init(
+        project='IVR_reproduce',
+        entity='your_wandb_id',
+        name=f"{FLAGS.env_name}",
+        config=kwargs
+    )
 
-    log = Log(Path('results')/FLAGS.env_name, kwargs)
+    log = Log(Path('benchmark')/FLAGS.env_name, kwargs)
     log(f'Log dir: {log.dir}')
     for i in tqdm.tqdm(range(1, FLAGS.max_steps + 1),
                        smoothing=0.1,
@@ -108,13 +108,13 @@ def main(_):
 
         update_info = agent.update(batch)
 
-        # if i % FLAGS.log_interval == 0:
-            # wandb.log(update_info, i)
+        if i % FLAGS.log_interval == 0:
+            wandb.log(update_info, i)
 
         if i % FLAGS.eval_interval == 0:
             normalized_return = evaluate(FLAGS.env_name, agent, env, FLAGS.eval_episodes)
             log.row({'normalized_return': normalized_return})
-            # wandb.log({'normalized_return': normalized_return}, i)
+            wandb.log({'normalized_return': normalized_return}, i)
 
 
 if __name__ == '__main__':

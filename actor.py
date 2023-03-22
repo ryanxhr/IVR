@@ -7,7 +7,7 @@ from common import Batch, InfoDict, Model, Params, PRNGKey
 
 
 def update_actor(key: PRNGKey, actor: Model, critic: Model, value: Model,
-                 batch: Batch, alpha: float, alg: str) -> Tuple[Model, InfoDict]:
+           batch: Batch, alpha: float, alg: str) -> Tuple[Model, InfoDict]:
     v = value(batch.observations)
     q1, q2 = critic(batch.observations, batch.actions)
     q = jnp.minimum(q1, q2)

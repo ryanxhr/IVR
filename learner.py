@@ -26,15 +26,14 @@ def target_update(critic: Model, target_critic: Model, tau: float) -> Model:
 @jax.jit
 def _update_jit_sql(
     rng: PRNGKey, actor: Model, critic: Model,
-    value: Model, target_critic: Model, batch: Batch, discount: float, tau: float,
+    value: Model, target_critic: Model, batch: Batch, discount: float, tau: float, 
     alpha: float
 ) -> Tuple[PRNGKey, Model, Model, Model, Model, Model, InfoDict]:
 
-    #SQL
     new_value, value_info = update_v(target_critic, value, batch, alpha, alg='SQL')
     key, rng = jax.random.split(rng)
     new_actor, actor_info = update_actor(key, actor, target_critic,
-                                         new_value, batch, alpha, alg='SQL')
+                                             new_value, batch, alpha, alg='SQL')
     new_critic, critic_info = update_q(critic, new_value, batch, discount)
 
     new_target_critic = target_update(new_critic, target_critic, tau)
@@ -48,15 +47,14 @@ def _update_jit_sql(
 @jax.jit
 def _update_jit_eql(
     rng: PRNGKey, actor: Model, critic: Model,
-    value: Model, target_critic: Model, batch: Batch, discount: float, tau: float,
+    value: Model, target_critic: Model, batch: Batch, discount: float, tau: float, 
     alpha: float
 ) -> Tuple[PRNGKey, Model, Model, Model, Model, Model, InfoDict]:
 
-    #EQL
     new_value, value_info = update_v(target_critic, value, batch, alpha, alg='EQL')
     key, rng = jax.random.split(rng)
     new_actor, actor_info = update_actor(key, actor, target_critic,
-                                         new_value, batch, alpha, alg='EQL')
+                                             new_value, batch, alpha, alg='EQL')
     new_critic, critic_info = update_q(critic, new_value, batch, discount)
 
     new_target_critic = target_update(new_critic, target_critic, tau)
@@ -78,10 +76,10 @@ class Learner(object):
                  hidden_dims: Sequence[int] = (256, 256),
                  discount: float = 0.99,
                  tau: float = 0.005,
-                #  expectile: float = 0.8,
                  alpha: float = 0.1,
                  dropout_rate: Optional[float] = None,
                  value_dropout_rate: Optional[float] = None,
+                 layernorm: bool = False,
                  max_steps: Optional[int] = None,
                  max_clip: Optional[int] = None,
                  mix_dataset: Optional[str] = None,
@@ -126,7 +124,7 @@ class Learner(object):
                               inputs=[critic_key, observations, actions],
                               tx=optax.adam(learning_rate=critic_lr))
 
-        value_def = value_net.ValueCritic(hidden_dims, dropout_rate=value_dropout_rate)
+        value_def = value_net.ValueCritic(hidden_dims, layer_norm=layernorm, dropout_rate=value_dropout_rate)
         value = Model.create(value_def,
                              inputs=[value_key, observations],
                              tx=optax.adam(learning_rate=value_lr))
@@ -152,6 +150,7 @@ class Learner(object):
         return np.clip(actions, -1, 1)
 
     def update(self, batch: Batch) -> InfoDict:
+        # type <class 'str'> is not a valid JAX type.
         if self.alg == 'SQL':
             new_rng, new_actor, new_critic, new_value, new_target_critic, info = _update_jit_sql(
                 self.rng, self.actor, self.critic, self.value, self.target_critic,
