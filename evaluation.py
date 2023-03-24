@@ -6,10 +6,10 @@ import numpy as np
 import d4rl
 
 # from mingpt.utils import sample
-import atari_py
+# import atari_py
 from collections import deque
 import random
-import cv2
+# import cv2
 # import torch
 
 
