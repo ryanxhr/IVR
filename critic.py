@@ -7,10 +7,6 @@ import jax
 from common import Batch, InfoDict, Model, Params
 
 
-def loss(diff):
-    weight = jnp.where(diff > 0, 1., 0.)
-    return weight * (diff**2)
-
 def update_v(critic: Model, value: Model, batch: Batch,
              alpha: float, alg: str) -> Tuple[Model, InfoDict]:
 
@@ -20,17 +16,16 @@ def update_v(critic: Model, value: Model, batch: Batch,
     def value_loss_fn(value_params: Params) -> Tuple[jnp.ndarray, InfoDict]:
         v = value.apply({'params': value_params}, batch.observations)
         if alg == 'SQL':
-            sp_term = (q - v) / alpha + 0.5
-            loss_v = loss(sp_term)
-            value_loss = (loss_v + v / alpha).mean()
+            sp_term = (q - v) / (2 * alpha) + 1.0
+            sp_weight = jnp.where(sp_term > 0, 1., 0.)
+            value_loss = (sp_weight * (sp_term**2) + v / alpha).mean()
         elif alg == 'EQL':
-            diff = (q - v) / alpha
-            diff = jnp.minimum(diff, 5.0)
-            max_z = jnp.max(diff, axis=0)
-            max_z = jnp.where(max_z < -1.0, -1.0, max_z)
-            max_z = jax.lax.stop_gradient(max_z)
-            loss_v = jnp.exp(diff - max_z) - diff * jnp.exp(-max_z) - jnp.exp(-max_z)
-            value_loss = loss_v.mean()
+            sp_term = (q - v) / alpha
+            sp_term = jnp.minimum(sp_term, 5.0)
+            max_sp_term = jnp.max(sp_term, axis=0)
+            max_sp_term = jnp.where(max_sp_term < -1.0, -1.0, max_sp_term)
+            max_sp_term = jax.lax.stop_gradient(max_sp_term)
+            value_loss = (jnp.exp(sp_term - max_sp_term) + jnp.exp(-max_sp_term) * v / alpha).mean()
         else:
             raise NotImplementedError('please choose SQL or EQL')
         return value_loss, {

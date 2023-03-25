@@ -82,18 +82,18 @@ def make_env_and_dataset(env_name: str,
 def main(_):
     env, dataset = make_env_and_dataset(FLAGS.env_name, FLAGS.seed)
     kwargs = dict(FLAGS.config)
-    kwargs['alpha']=FLAGS.alpha
-    kwargs['alg']=FLAGS.alg
+    kwargs['alpha'] = FLAGS.alpha
+    kwargs['alg'] = FLAGS.alg
     agent = Learner(FLAGS.seed,
                     env.observation_space.sample()[np.newaxis],
                     env.action_space.sample()[np.newaxis],
                     max_steps=FLAGS.max_steps,
                     **kwargs)
-    kwargs['seed']=FLAGS.seed
-    kwargs['env_name']=FLAGS.env_name
+    kwargs['seed'] = FLAGS.seed
+    kwargs['env_name'] = FLAGS.env_name
 
     wandb.init(
-        project='IVR_reproduce',
+        project='project_name',
         entity='your_wandb_id',
         name=f"{FLAGS.env_name}",
         config=kwargs
