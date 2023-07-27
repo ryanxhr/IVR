@@ -2,6 +2,7 @@
 
 This is the code for reproducing the results of the paper Offline RL with No OOD Actions: In-Sample Learning via Implicit Value Regularization accepted as **Notable-top-5%** at ICLR'2023.
 
+The discrete version of IVR on Atari datasets can be found at https://github.com/ryanxhr/Discrete_IVR.
 
 ### Usage
 Our code is built on the jax version code of IQL (https://github.com/ikostrikov/implicit_q_learning). Paper reuslts can be reproduced by running `./run_mujoco.sh`, `./run_antmaze.sh` and `./run_kitchen.sh`.
